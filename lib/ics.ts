@@ -2,10 +2,8 @@ import { createEvent, EventAttributes } from "ics";
 import type { EventDraft } from "./types";
 
 /**
- * Extract [year, month, day, hour, minute] components in the event's own
- * timezone so the ICS file carries `DTSTART;TZID=<tz>:...` rather than a
- * UTC Z-suffix timestamp.  HEY Calendar (and every other app) then displays
- * the event in the attendee's local timezone correctly.
+ * Extract [year, month, day, hour, minute] in the event's IANA timezone so
+ * the ICS carries DTSTART;TZID=<tz>:... rather than a UTC Z-suffix.
  */
 function localComponents(
   iso: string,
@@ -23,14 +21,23 @@ function localComponents(
   }).formatToParts(d);
   const get = (type: string) =>
     parseInt(parts.find((p) => p.type === type)!.value, 10);
-  // hour12:false can return 24 for midnight — normalise to 0
-  const h = get("hour") % 24;
+  const h = get("hour") % 24; // hour12:false returns 24 for midnight
   return [get("year"), get("month"), get("day"), h, get("minute")];
 }
 
 function allDayComponents(iso: string): [number, number, number] {
   const d = new Date(iso);
   return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
+}
+
+/**
+ * ics v3 has no startTimezone/endTimezone props, so we generate floating
+ * local times then inject TZID= into DTSTART/DTEND ourselves — RFC 5545 §3.3.5.
+ */
+function injectTzid(icsValue: string, tz: string): string {
+  return icsValue
+    .replace(/^DTSTART:/m, `DTSTART;TZID=${tz}:`)
+    .replace(/^DTEND:/m, `DTEND;TZID=${tz}:`);
 }
 
 export function generateIcs(event: EventDraft): string {
@@ -42,12 +49,12 @@ export function generateIcs(event: EventDraft): string {
       ? allDayComponents(event.start)
       : localComponents(event.start, tz),
     startInputType: "local",
-    ...(event.all_day ? {} : { startTimezone: tz }),
+    startOutputType: "local",
     end: event.all_day
       ? allDayComponents(event.end)
       : localComponents(event.end, tz),
     endInputType: "local",
-    ...(event.all_day ? {} : { endTimezone: tz }),
+    endOutputType: "local",
     location: event.location || undefined,
     description: event.notes || undefined,
     productId: "snapvite/ics",
@@ -56,7 +63,7 @@ export function generateIcs(event: EventDraft): string {
 
   const { value, error } = createEvent(attrs);
   if (error || !value) throw error ?? new Error("ICS generation failed");
-  return value;
+  return event.all_day ? value : injectTzid(value, tz);
 }
 
 export function buildGcalUrl(event: EventDraft): string {
@@ -89,6 +96,5 @@ export function buildAppleCalUrl(event: EventDraft): string {
     location: event.location || "",
     notes: event.notes || "",
   });
-  // Apple Calendar deep link
   return `webcal://p.bento.me/v1/new-event?${params}`;
 }
