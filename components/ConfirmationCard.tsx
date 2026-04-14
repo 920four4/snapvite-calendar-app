@@ -67,15 +67,16 @@ export function ConfirmationCard({
 }: {
   event: EventDraft; preview: string; heyEmail?: string | null;
 }) {
-  const { updateEvent, setDelivering, setDone, setError, setIdle } = useAppStore();
+  const { updateEvent, setDone, setIdle } = useAppStore();
   const [delivering, setDeliveringLocal] = useState(false);
   const [manualEmail, setManualEmail] = useState(heyEmail ?? "");
   const [emailError, setEmailError] = useState("");
 
   async function deliver(mode: DeliveryMode) {
     setDeliveringLocal(true);
-    setDelivering(event, mode);
+    setEmailError("");
 
+    // gcal / apple / download — instant client-side, no network wait needed
     if (mode === "gcal") {
       window.open(buildGcalUrl(event), "_blank");
       setDone(event, mode);
@@ -84,49 +85,51 @@ export function ConfirmationCard({
 
     if (mode === "apple" || mode === "download") {
       const ics = generateIcs(event);
-      const blob = new Blob([ics], { type: "text/calendar" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${event.title.slice(0, 40)}.ics`;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerDownload(ics, event.title);
+      // Fire-and-forget telemetry — never await, never block UI
       fetch("/api/deliver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ics, mode, eventTitle: event.title }),
-      });
+      }).catch(() => {});
       setDone(event, mode);
       return;
     }
 
-    // hey_email
+    // hey_email — keep the card visible with a local spinner; only transition
+    // to "done" on success so the app can never get stuck on "Delivering…"
     if (!manualEmail) {
       setEmailError("Enter your HEY email address first.");
       setDeliveringLocal(false);
       return;
     }
     const ics = generateIcs(event);
-    const res = await fetch("/api/deliver", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ics, mode: "hey_email", recipientEmail: manualEmail, eventTitle: event.title }),
-    });
-    const data = await res.json();
-    if (!data.ok) {
-      // Fallback: auto-download the .ics
-      const blob = new Blob([ics], { type: "text/calendar" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${event.title.slice(0, 40)}.ics`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setEmailError((data.error ?? "Email failed") + " — .ics downloaded instead.");
+    try {
+      const res = await fetch("/api/deliver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ics, mode: "hey_email", recipientEmail: manualEmail, eventTitle: event.title }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error ?? "Email failed");
+      setDone(event, "hey_email");
+    } catch (err: unknown) {
+      // Silently fall back to downloading the .ics so the user isn't left empty-handed
+      triggerDownload(ics, event.title);
+      const msg = err instanceof Error ? err.message : "Email failed";
+      setEmailError(msg + " — .ics downloaded instead.");
       setDeliveringLocal(false);
-      return;
     }
-    setDone(event, "hey_email");
+  }
+
+  function triggerDownload(ics: string, title: string) {
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.slice(0, 40)}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const confidenceBadge = {
@@ -234,7 +237,9 @@ export function ConfirmationCard({
               onClick={() => deliver("hey_email")}
               type="button"
             >
-              Send
+              {delivering
+                ? <span className="spinner" style={{ borderTopColor: "#fff", borderColor: "rgba(255,255,255,0.3)", width: "16px", height: "16px", borderWidth: "2px" }} />
+                : "Send"}
             </button>
           </div>
           {emailError && (

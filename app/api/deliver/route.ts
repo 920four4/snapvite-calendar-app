@@ -54,10 +54,12 @@ export async function POST(req: NextRequest) {
 
     if (result.error) {
       console.error("[/api/deliver] Resend error:", result.error);
-      return NextResponse.json(
-        { ok: false, error: "Failed to send email." },
-        { status: 500 }
-      );
+      // Provide a human-readable message for the common onboarding@resend.dev restriction
+      const msg = String((result.error as { message?: string }).message ?? result.error);
+      const userMsg = msg.toLowerCase().includes("own email")
+        ? "The test sender (onboarding@resend.dev) can only send to the Resend account owner's email. Use Download .ics instead, or verify a domain in Resend."
+        : "Failed to send email — check your HEY address and try again.";
+      return NextResponse.json({ ok: false, error: userMsg }, { status: 500 });
     }
 
     // Record delivery mode
