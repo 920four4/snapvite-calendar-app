@@ -84,6 +84,7 @@ export function ConfirmationCard({
   const [delivering, setDeliveringLocal] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [manualEmail, setManualEmail] = useState(heyEmail ?? "");
+  const [emailError, setEmailError] = useState("");
 
   async function deliver(mode: DeliveryMode) {
     setDeliveringLocal(true);
@@ -146,7 +147,15 @@ export function ConfirmationCard({
     });
     const data = await res.json();
     if (!data.ok) {
-      setError(data.error ?? "Failed to send email.");
+      // Email failed — fall back gracefully: download the .ics so the user isn't stuck
+      const blob = new Blob([ics], { type: "text/calendar" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${event.title.slice(0, 40)}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setEmailError(data.error ?? "Failed to send email.");
       setDeliveringLocal(false);
       return;
     }
@@ -282,7 +291,7 @@ export function ConfirmationCard({
               type="email"
               placeholder="you@hey.com"
               value={manualEmail}
-              onChange={(e) => setManualEmail(e.target.value)}
+              onChange={(e) => { setManualEmail(e.target.value); setEmailError(""); }}
             />
             <button
               className="btn btn-primary whitespace-nowrap"
@@ -293,6 +302,18 @@ export function ConfirmationCard({
               📩 Email to HEY
             </button>
           </div>
+          {emailError && (
+            <div
+              className="text-sm p-3 rounded flex gap-2 items-start"
+              style={{ background: "var(--highlight)", border: "2px solid var(--ink)" }}
+            >
+              <span>⚠️</span>
+              <div>
+                <p className="font-semibold">Email failed — .ics downloaded instead</p>
+                <p className="text-ink/70 mt-0.5">{emailError} Open the downloaded file to add to any calendar app.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
