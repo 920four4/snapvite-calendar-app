@@ -1,4 +1,4 @@
-const CACHE_NAME = "snapvite-v1";
+const CACHE_NAME = "snapvite-v2";
 const OFFLINE_URL = "/offline";
 
 // Assets to pre-cache
@@ -27,6 +27,11 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = event.request.url;
+
+  // Only handle http/https — skip chrome-extension://, data:, etc.
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+
   // Network-first for API routes
   if (event.request.url.includes("/api/")) {
     event.respondWith(
