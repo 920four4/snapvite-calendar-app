@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snapvite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">📸</span>
+        <span class="logo-text">Snapvite</span>
+      </div>
+    </header>
+
+    <!-- Main action -->
+    <div class="main">
+      <button id="btn-screenshot" class="btn-capture">
+        <div class="btn-capture-icon">📷</div>
+        <div class="btn-capture-content">
+          <span class="btn-capture-label">Capture this tab</span>
+          <span class="btn-capture-sub">Screenshot → parse → calendar</span>
+        </div>
+      </button>
+
+      <div class="divider-row">
+        <div class="divider-line"></div>
+        <span class="divider-text">or</span>
+        <div class="divider-line"></div>
+      </div>
+
+      <p class="hint">
+        Right-click any image on a webpage and choose
+        <strong>&ldquo;Add to calendar with Snapvite&rdquo;</strong>
+      </p>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="status hidden"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a id="open-site" href="https://snapvite-calendar-app.vercel.app" target="_blank" class="footer-link">
+        Open Snapvite ↗
+      </a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

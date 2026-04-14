@@ -6,32 +6,33 @@ export function ErrorCard({ message, preview }: { message: string; preview?: str
   const { setIdle } = useAppStore();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="card p-5 flex flex-col gap-4">
       {preview && (
-        <div className="card overflow-hidden max-h-32 flex items-center justify-center bg-muted">
+        <div
+          className="w-full rounded-xl overflow-hidden flex items-center justify-center"
+          style={{ maxHeight: "120px", background: "var(--bg)" }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="Failed screenshot" className="object-contain max-h-32 w-auto" />
+          <img src={preview} alt="" className="object-contain max-h-[120px] w-auto opacity-60" />
         </div>
       )}
 
-      <div
-        className="card p-6 flex flex-col gap-4"
-        style={{ borderColor: "var(--accent)", boxShadow: "6px 6px 0 0 var(--accent)" }}
-      >
-        <div className="flex items-start gap-3">
-          <span className="text-2xl" aria-hidden="true">⚠️</span>
-          <div>
-            <p className="font-bold text-lg mb-1">Couldn&apos;t parse this one</p>
-            <p className="text-ink/70 text-sm">{message}</p>
-          </div>
+      <div className="flex gap-3 items-start">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+          style={{ background: "#fee2e2" }}
+        >
+          ⚠️
         </div>
-
-        <div className="flex gap-2">
-          <button className="btn btn-primary flex-1" onClick={() => setIdle()} type="button">
-            Try another screenshot
-          </button>
+        <div>
+          <p className="font-semibold text-base">Couldn&apos;t parse this one</p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--ink-2)" }}>{message}</p>
         </div>
       </div>
+
+      <button className="btn btn-surface w-full" onClick={() => setIdle()} type="button">
+        Try another screenshot
+      </button>
     </div>
   );
 }

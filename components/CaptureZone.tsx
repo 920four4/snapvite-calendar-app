@@ -5,12 +5,8 @@ import { useAppStore } from "@/lib/store";
 import type { EventDraft } from "@/lib/types";
 
 const ACCEPTED_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/heic",
-  "image/gif",
+  "image/png", "image/jpeg", "image/jpg",
+  "image/webp", "image/heic", "image/gif",
 ];
 
 function fileToBase64(file: File): Promise<{ base64: string; mediaType: string; preview: string }> {
@@ -30,7 +26,7 @@ function fileToBase64(file: File): Promise<{ base64: string; mediaType: string; 
 async function parseImage(
   base64: string,
   mediaType: string,
-  setConfirming: (event: import("@/lib/types").EventDraft, preview: string) => void,
+  setConfirming: (event: EventDraft, preview: string) => void,
   setError: (message: string, preview?: string) => void,
   preview: string
 ) {
@@ -48,10 +44,10 @@ async function parseImage(
   if (!res.ok || data.error) {
     const msg =
       data.reason === "not_an_event"
-        ? "No calendar event found in that image. Try a screenshot of an event invite, DM, or booking confirmation."
+        ? "No calendar event found in that image. Try a screenshot of an invite, message, or booking confirmation."
         : data.reason === "rate_limited"
         ? data.error
-        : "Could not parse the image. Please try a clearer screenshot.";
+        : "Couldn't parse the image. Try a clearer or higher-resolution screenshot.";
     setError(msg, preview);
     return;
   }
@@ -70,10 +66,8 @@ export function CaptureZone() {
         setError("Please use a PNG, JPEG, WebP, or GIF image.");
         return;
       }
-
       const { base64, mediaType, preview } = await fileToBase64(file);
       setParsing(preview);
-
       await parseImage(base64, mediaType, setConfirming, setError, preview);
     },
     [setParsing, setConfirming, setError]
@@ -111,7 +105,7 @@ export function CaptureZone() {
 
   return (
     <div
-      className={`drop-zone flex flex-col items-center justify-center gap-6 p-10 min-h-[320px] cursor-pointer select-none ${dragOver ? "drag-over" : ""}`}
+      className={`drop-zone flex flex-col items-center justify-center gap-5 p-10 min-h-[260px] cursor-pointer select-none ${dragOver ? "drag-over" : ""}`}
       onPaste={onPaste}
       onDrop={onDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -131,32 +125,29 @@ export function CaptureZone() {
         aria-hidden="true"
       />
 
-      <div className="text-6xl select-none" aria-hidden="true">📸</div>
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+        style={{ background: "rgba(255,94,91,0.08)" }}
+      >
+        📸
+      </div>
 
       <div className="text-center">
-        <p className="text-2xl font-bold tracking-tight">
-          Paste, drop, or tap.
+        <p className="text-lg font-semibold" style={{ color: "var(--ink)" }}>
+          Drop a screenshot here
         </p>
-        <p className="text-base text-ink/60 mt-1">
-          Screenshot any event — iMessage, Telegram, Luma, booking confirmation
+        <p className="text-sm mt-1" style={{ color: "var(--ink-2)" }}>
+          or paste with ⌘V · works with iMessage, Telegram, Luma, and more
         </p>
       </div>
 
-      <div className="flex gap-3 flex-wrap justify-center">
-        <kbd className="card-sm px-3 py-1 text-sm font-mono text-ink/70">
-          ⌘V paste
-        </kbd>
-        <kbd className="card-sm px-3 py-1 text-sm font-mono text-ink/70">
-          drag &amp; drop
-        </kbd>
-        <button
-          className="btn btn-primary text-sm"
-          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-          type="button"
-        >
-          Browse file
-        </button>
-      </div>
+      <button
+        className="btn btn-surface text-sm"
+        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+        type="button"
+      >
+        Browse file
+      </button>
     </div>
   );
 }

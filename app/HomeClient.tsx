@@ -1,115 +1,138 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppStore } from "@/lib/store";
+import { createSupabaseClient } from "@/lib/supabase-client";
 import { CaptureZone } from "@/components/CaptureZone";
 import { ParseLoading } from "@/components/ParseLoading";
 import { ConfirmationCard } from "@/components/ConfirmationCard";
 import { SuccessScreen } from "@/components/SuccessScreen";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Header } from "@/components/Header";
-import { brand } from "@/config/brand";
 
 export default function HomeClient() {
-  const { state, setParsing, setConfirming, setError } = useAppStore();
+  const { state, setParsing, setConfirming, setError, setIdle } = useAppStore();
   const searchParams = useSearchParams();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [heyEmail, setHeyEmail] = useState<string | null>(null);
+
+  // Load auth state
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setUserEmail(data.user.email);
+        supabase
+          .from("user_settings")
+          .select("hey_email")
+          .eq("user_id", data.user.id)
+          .single()
+          .then(({ data: s }) => { if (s?.hey_email) setHeyEmail(s.hey_email); });
+      }
+    });
+
+    // Listen for auth state changes (magic link sign-in)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) setUserEmail(session.user.email);
+      else setUserEmail(null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Handle Web Share Target redirect: /?shared=<token>
   useEffect(() => {
     const token = searchParams.get("shared");
     if (!token) return;
+    window.history.replaceState({}, "", "/");
+    fetchAndParse(`/api/share?token=${token}`, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
-    // Clear the URL param without adding a history entry
+  // Handle Chrome Extension handoff: /?ext=<token>
+  useEffect(() => {
+    const extToken = searchParams.get("ext");
+    if (!extToken) return;
     window.history.replaceState({}, "", "/");
 
-    (async () => {
-      const res = await fetch(`/api/share?token=${token}`);
-      if (!res.ok) {
-        setError("Shared image expired or not found. Please try again.");
-        return;
-      }
-      const { data, mediaType } = await res.json();
-      const preview = `data:${mediaType};base64,${data}`;
+    function handleExtMessage(e: MessageEvent) {
+      if (e.data?.type !== "SNAPVITE_EXT_IMAGE") return;
+      window.removeEventListener("message", handleExtMessage);
+      const { base64, mediaType } = e.data;
+      const preview = `data:${mediaType};base64,${base64}`;
       setParsing(preview);
+      callParse(base64, mediaType, preview);
+    }
+    window.addEventListener("message", handleExtMessage);
+    // Clean up after 5s if no message received
+    const t = setTimeout(() => window.removeEventListener("message", handleExtMessage), 5000);
+    return () => { clearTimeout(t); window.removeEventListener("message", handleExtMessage); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const currentDateISO = new Date().toISOString();
+  async function fetchAndParse(shareUrl: string, isShare: boolean) {
+    const res = await fetch(shareUrl);
+    if (!res.ok) { setError("Shared image expired or not found."); return; }
+    const { data, mediaType } = await res.json();
+    const preview = `data:${mediaType};base64,${data}`;
+    setParsing(preview);
+    await callParse(data, mediaType, preview);
+  }
 
-      const parseRes = await fetch("/api/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: data, mediaType, userTimezone, currentDateISO }),
-      });
-      const parsed = await parseRes.json();
-
-      if (!parseRes.ok || parsed.error) {
-        setError(parsed.error ?? "Could not parse the shared image.", preview);
-        return;
-      }
-      setConfirming(parsed.event, preview);
-    })();
-  }, [searchParams, setParsing, setConfirming, setError]);
+  async function callParse(base64: string, mediaType: string, preview: string) {
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const currentDateISO = new Date().toISOString();
+    const res = await fetch("/api/parse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, mediaType, userTimezone, currentDateISO }),
+    });
+    const parsed = await res.json();
+    if (!res.ok || parsed.error) {
+      setError(parsed.error ?? "Could not parse the image.", preview);
+      return;
+    }
+    setConfirming(parsed.event, preview);
+  }
 
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
-      <Header />
+      <Header userEmail={userEmail} />
 
-      <main className="flex-1 flex flex-col items-center px-4 py-8">
-        <div className="w-full max-w-xl flex flex-col gap-6">
+      <main className="flex-1 flex flex-col items-center px-4 py-10">
+        <div className="w-full max-w-lg flex flex-col gap-4">
 
-          {/* Landing hero — only show when idle */}
           {state.status === "idle" && (
-            <div className="flex flex-col gap-4">
-              <div className="card p-6 flex flex-col gap-2">
+            <>
+              {/* Hero text */}
+              <div className="text-center mb-2">
                 <h1 className="text-3xl font-bold tracking-tight leading-tight">
-                  Screenshot any event.
-                  <br />
-                  <span style={{ color: "var(--accent)" }}>Get it into your calendar</span>{" "}
-                  in one tap.
+                  Screenshot → Calendar
                 </h1>
-                <p className="text-ink/60 text-base">
-                  Built for HEY Calendar users. Works with any calendar.
+                <p className="mt-2 text-base" style={{ color: "var(--ink-2)" }}>
+                  Paste any event screenshot and we&apos;ll add it to your calendar in seconds.
                 </p>
               </div>
 
               <CaptureZone />
 
-              <div
-                className="text-sm p-3 rounded flex gap-2 items-start"
-                style={{ background: "var(--muted)", border: "2px solid var(--ink)" }}
-              >
-                <span>🔒</span>
-                <p className="text-ink/70">
-                  <strong>Privacy first.</strong> Your screenshots are never stored. We parse
-                  and immediately discard the image — only the event data is saved.
-                </p>
-              </div>
-
-              {/* iOS caveat — transparent and honest */}
-              <div
-                className="text-sm p-3 rounded flex gap-2 items-start"
-                style={{ background: "var(--highlight)", border: "2px solid var(--ink)" }}
-              >
-                <span>📱</span>
-                <p className="text-ink/70">
-                  <strong>iOS users:</strong> paste or upload a screenshot in Safari. The
-                  one-tap share-sheet flow requires a native app — coming in Phase 2.
-                </p>
-              </div>
-            </div>
+              {/* Privacy note */}
+              <p className="text-xs text-center" style={{ color: "var(--ink-3)" }}>
+                🔒 Screenshots are never stored — only the parsed event data.
+              </p>
+            </>
           )}
 
           {state.status === "parsing" && <ParseLoading preview={state.preview} />}
 
           {state.status === "confirming" && (
-            <ConfirmationCard event={state.event} preview={state.preview} />
+            <ConfirmationCard event={state.event} preview={state.preview} heyEmail={heyEmail} />
           )}
 
           {state.status === "delivering" && (
             <div className="card p-8 flex flex-col items-center gap-4">
-              <span className="text-4xl animate-spin" aria-hidden="true">⚙️</span>
-              <p className="font-bold text-lg">Delivering…</p>
+              <div className="spinner" style={{ width: "32px", height: "32px", borderWidth: "3px" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>Delivering…</p>
             </div>
           )}
 
@@ -123,13 +146,8 @@ export default function HomeClient() {
         </div>
       </main>
 
-      <footer
-        className="text-center text-xs text-ink/40 py-4 px-4"
-        style={{ borderTop: "var(--border)" }}
-      >
-        <p>
-          {brand.name} — {brand.tagline}
-        </p>
+      <footer className="text-center text-xs py-5 px-4" style={{ color: "var(--ink-3)", borderTop: "1px solid var(--border)" }}>
+        Built for HEY Calendar users · Screenshots never stored
       </footer>
     </div>
   );
