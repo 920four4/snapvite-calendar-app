@@ -27,7 +27,7 @@ export default function HomeClient() {
           .from("user_settings")
           .select("hey_email")
           .eq("user_id", data.user.id)
-          .single()
+          .maybeSingle()
           .then(({ data: s }) => { if (s?.hey_email) setHeyEmail(s.hey_email); });
       }
     });

@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         .from("user_settings")
         .select("plan")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (settings?.plan !== "pro") {
         const { success } = await getFreeLimiter().limit(user.id);
