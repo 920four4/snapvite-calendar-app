@@ -11,7 +11,7 @@ import { SuccessScreen } from "@/components/SuccessScreen";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Header } from "@/components/Header";
 
-export default function HomeClient() {
+export default function HomeClient({ emailEnabled = false }: { emailEnabled?: boolean }) {
   const { state, setParsing, setConfirming, setError, setIdle } = useAppStore();
   const searchParams = useSearchParams();
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -49,14 +49,21 @@ export default function HomeClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Handle Chrome Extension handoff: /?ext=<token>
+  // Handle Chrome Extension handoff: /?ext=<token>.
+  // The content script retries every 150ms until we ACK, so mounting order
+  // doesn't matter — but we also announce READY right away to short-circuit
+  // the retry loop when the page wins the race.
   useEffect(() => {
     const extToken = searchParams.get("ext");
     if (!extToken) return;
     window.history.replaceState({}, "", "/");
 
+    let handled = false;
     function handleExtMessage(e: MessageEvent) {
-      if (e.data?.type !== "SNAPVITE_EXT_IMAGE") return;
+      if (e.source !== window) return;
+      if (e.data?.type !== "SNAPVITE_EXT_IMAGE" || handled) return;
+      handled = true;
+      window.postMessage({ type: "SNAPVITE_EXT_ACK" }, window.location.origin);
       window.removeEventListener("message", handleExtMessage);
       const { base64, mediaType } = e.data;
       const preview = `data:${mediaType};base64,${base64}`;
@@ -64,9 +71,20 @@ export default function HomeClient() {
       callParse(base64, mediaType, preview);
     }
     window.addEventListener("message", handleExtMessage);
-    // Clean up after 5s if no message received
-    const t = setTimeout(() => window.removeEventListener("message", handleExtMessage), 5000);
-    return () => { clearTimeout(t); window.removeEventListener("message", handleExtMessage); };
+    // Tell the content script we're ready — works even if we mounted last.
+    window.postMessage({ type: "SNAPVITE_EXT_READY" }, window.location.origin);
+
+    // If nothing arrives in 10s, surface an error instead of hanging forever.
+    const timeoutId = setTimeout(() => {
+      if (handled) return;
+      window.removeEventListener("message", handleExtMessage);
+      setError("Couldn't receive the screenshot from the extension. Try capturing again.");
+    }, 10000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("message", handleExtMessage);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -126,7 +144,12 @@ export default function HomeClient() {
           {state.status === "parsing" && <ParseLoading preview={state.preview} />}
 
           {state.status === "confirming" && (
-            <ConfirmationCard event={state.event} preview={state.preview} heyEmail={heyEmail} />
+            <ConfirmationCard
+              event={state.event}
+              preview={state.preview}
+              heyEmail={heyEmail}
+              emailEnabled={emailEnabled}
+            />
           )}
 
           {state.status === "delivering" && (

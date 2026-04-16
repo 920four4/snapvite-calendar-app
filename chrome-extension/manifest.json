@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Snapvite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Screenshot any event, add it to your calendar in one click.",
   "permissions": [
     "activeTab",
     "contextMenus",
+    "notifications",
     "scripting",
     "storage",
     "tabs"
@@ -19,8 +20,7 @@
     "type": "module"
   },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Snapvite — Screenshot to Calendar",
+    "default_title": "Snapvite — click to screenshot this tab",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
@@ -32,7 +32,8 @@
     {
       "matches": ["https://snapvite-calendar-app.vercel.app/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start",
+      "all_frames": false
     }
   ],
   "icons": {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { sendToHey } from "@/lib/deliver";
+import { EmailNotConfiguredError, sendToHey } from "@/lib/deliver";
 import type { DeliveryMode } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -46,20 +46,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await sendToHey({
-      toEmail: recipientEmail,
-      eventTitle,
-      ics,
-    });
+    let result;
+    try {
+      result = await sendToHey({
+        toEmail: recipientEmail,
+        eventTitle,
+        ics,
+      });
+    } catch (err) {
+      if (err instanceof EmailNotConfiguredError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "email_not_configured",
+            error: "Email sending isn't set up yet — downloading a .ics file instead.",
+          },
+          { status: 503 }
+        );
+      }
+      throw err;
+    }
 
     if (result.error) {
       console.error("[/api/deliver] Resend error:", result.error);
-      // Provide a human-readable message for the common onboarding@resend.dev restriction
       const msg = String((result.error as { message?: string }).message ?? result.error);
-      const userMsg = msg.toLowerCase().includes("own email")
-        ? "The test sender (onboarding@resend.dev) can only send to the Resend account owner's email. Use Download .ics instead, or verify a domain in Resend."
-        : "Failed to send email — check your HEY address and try again.";
-      return NextResponse.json({ ok: false, error: userMsg }, { status: 500 });
+      const lower = msg.toLowerCase();
+      // Resend sandbox restriction — shouldn't normally happen now that we
+      // require a verified RESEND_FROM_EMAIL, but catch it just in case.
+      if (lower.includes("own email") || lower.includes("testing emails")) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "sender_unverified",
+            error: "This Snapvite deployment can't email that address yet — verify a sender domain in Resend.",
+          },
+          { status: 500 }
+        );
+      }
+      if (lower.includes("invalid") && lower.includes("email")) {
+        return NextResponse.json(
+          { ok: false, code: "invalid_email", error: "That doesn't look like a valid email address." },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { ok: false, code: "send_failed", error: "Couldn't send the email — try again or use .ics download." },
+        { status: 502 }
+      );
     }
 
     // Record delivery mode

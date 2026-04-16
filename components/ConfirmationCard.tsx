@@ -63,9 +63,9 @@ function Field({
 }
 
 export function ConfirmationCard({
-  event, preview, heyEmail,
+  event, preview, heyEmail, emailEnabled = false,
 }: {
-  event: EventDraft; preview: string; heyEmail?: string | null;
+  event: EventDraft; preview: string; heyEmail?: string | null; emailEnabled?: boolean;
 }) {
   const { updateEvent, setDone, setIdle } = useAppStore();
   const [delivering, setDeliveringLocal] = useState(false);
@@ -114,10 +114,10 @@ export function ConfirmationCard({
       if (!data.ok) throw new Error(data.error ?? "Email failed");
       setDone(event, "hey_email");
     } catch (err: unknown) {
-      // Silently fall back to downloading the .ics so the user isn't left empty-handed
+      // Keep the user unblocked: hand them the .ics file right away.
       triggerDownload(ics, event.title);
-      const msg = err instanceof Error ? err.message : "Email failed";
-      setEmailError(msg + " — .ics downloaded instead.");
+      const msg = err instanceof Error && err.message ? err.message : "Couldn't send the email";
+      setEmailError(/downloaded|\.ics/i.test(msg) ? msg : `${msg} — .ics downloaded instead.`);
       setDeliveringLocal(false);
     }
   }
@@ -218,41 +218,45 @@ export function ConfirmationCard({
         <p className="font-semibold text-base">Add to calendar</p>
         <div className="divider" />
 
-        {/* HEY email */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
-            HEY Calendar
-          </label>
-          <div className="flex gap-2">
-            <input
-              className="input flex-1"
-              type="email"
-              placeholder="you@hey.com"
-              value={manualEmail}
-              onChange={(e) => { setManualEmail(e.target.value); setEmailError(""); }}
-            />
-            <button
-              className="btn btn-primary flex-shrink-0"
-              disabled={delivering || !manualEmail}
-              onClick={() => deliver("hey_email")}
-              type="button"
-            >
-              {delivering
-                ? <span className="spinner" style={{ borderTopColor: "#fff", borderColor: "rgba(255,255,255,0.3)", width: "16px", height: "16px", borderWidth: "2px" }} />
-                : "Send"}
-            </button>
-          </div>
-          {emailError && (
-            <p className="text-xs" style={{ color: "var(--accent)" }}>{emailError}</p>
-          )}
-        </div>
+        {emailEnabled && (
+          <>
+            {/* HEY email */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)" }}>
+                HEY Calendar
+              </label>
+              <div className="flex gap-2">
+                <input
+                  className="input flex-1"
+                  type="email"
+                  placeholder="you@hey.com"
+                  value={manualEmail}
+                  onChange={(e) => { setManualEmail(e.target.value); setEmailError(""); }}
+                />
+                <button
+                  className="btn btn-primary flex-shrink-0"
+                  disabled={delivering || !manualEmail}
+                  onClick={() => deliver("hey_email")}
+                  type="button"
+                >
+                  {delivering
+                    ? <span className="spinner" style={{ borderTopColor: "#fff", borderColor: "rgba(255,255,255,0.3)", width: "16px", height: "16px", borderWidth: "2px" }} />
+                    : "Send"}
+                </button>
+              </div>
+              {emailError && (
+                <p className="text-xs" style={{ color: "var(--accent)" }}>{emailError}</p>
+              )}
+            </div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-2">
-          <div className="divider flex-1" />
-          <span className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>or</span>
-          <div className="divider flex-1" />
-        </div>
+            {/* Divider */}
+            <div className="flex items-center gap-2">
+              <div className="divider flex-1" />
+              <span className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>or</span>
+              <div className="divider flex-1" />
+            </div>
+          </>
+        )}
 
         {/* Other options */}
         <div className="grid grid-cols-3 gap-2">
