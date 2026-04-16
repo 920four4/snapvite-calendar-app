@@ -51,7 +51,13 @@ body {
   margin: 0;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(1100px 520px at 10% -10%, rgba(255, 94, 91, 0.08), transparent 60%),
+    radial-gradient(900px 420px at 105% 10%, rgba(0, 194, 168, 0.06), transparent 55%);
+  background-attachment: fixed;
 }
+
+h1, h2, h3 { letter-spacing: -0.02em; }
 
 /* ─── Surface / Card ─────────────────────────────────────────────── */
 .card {
@@ -276,3 +282,231 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Landing: Chip ──────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-xs);
+}
+
+.chip-accent {
+  background: rgba(255, 94, 91, 0.08);
+  border-color: rgba(255, 94, 91, 0.22);
+  color: #c4403d;
+}
+
+.chip kbd {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.05rem 0.35rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+/* ─── Landing: Hero copy ─────────────────────────────────────────── */
+.hero-title {
+  font-size: clamp(2.1rem, 5vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #ff8a5c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-sub {
+  font-size: clamp(1rem, 1.6vw, 1.125rem);
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+/* ─── Landing: Section ───────────────────────────────────────────── */
+.section-title {
+  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.section-eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ─── Landing: Step card (numbered) ──────────────────────────────── */
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* ─── Landing: Feature tile ──────────────────────────────────────── */
+.feature-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.feature-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: #dfdbd5;
+}
+
+.feature-tile .icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: rgba(255, 94, 91, 0.08);
+  margin-bottom: 0.25rem;
+}
+
+/* ─── Landing: Source tile ───────────────────────────────────────── */
+.source-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ─── Landing: Marquee strip ─────────────────────────────────────── */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-row {
+  display: flex;
+  gap: 0.6rem;
+  width: max-content;
+  animation: marquee-x 32s linear infinite;
+}
+
+.marquee-wrap {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-row { animation: none; }
+}
+
+/* ─── Landing: Accordion ─────────────────────────────────────────── */
+details.faq {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+
+details.faq > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+details.faq > summary::-webkit-details-marker { display: none; }
+
+details.faq > summary::after {
+  content: "+";
+  font-size: 1.25rem;
+  color: var(--ink-3);
+  font-weight: 400;
+  transition: transform 150ms ease;
+  line-height: 1;
+}
+
+details.faq[open] > summary::after { transform: rotate(45deg); }
+
+details.faq > p {
+  margin-top: 0.5rem;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* ─── Landing: Gentle fade-in ────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fade-up 500ms ease both;
+}
+
+/* ─── Landing: Floating calendar tile ────────────────────────────── */
+.cal-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 130px;
+}
+
+.cal-tile .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ─── Drop zone polish ───────────────────────────────────────────── */
+.drop-zone {
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.drop-zone:hover { box-shadow: var(--shadow-sm); }

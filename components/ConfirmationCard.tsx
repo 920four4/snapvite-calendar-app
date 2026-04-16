@@ -139,7 +139,7 @@ export function ConfirmationCard({
   }[event.confidence];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 fade-up">
       {/* Screenshot thumbnail */}
       <div
         className="card-flat overflow-hidden flex items-center justify-center"
@@ -151,8 +151,13 @@ export function ConfirmationCard({
 
       {/* Event details form */}
       <div className="card p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <p className="font-semibold text-base">Event details</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-0.5">
+            <p className="font-semibold text-base leading-tight">Event details</p>
+            <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+              Review before you send. Yellow fields were uncertain.
+            </p>
+          </div>
           {confidenceBadge}
         </div>
 

@@ -10,6 +10,8 @@ import { ConfirmationCard } from "@/components/ConfirmationCard";
 import { SuccessScreen } from "@/components/SuccessScreen";
 import { ErrorCard } from "@/components/ErrorCard";
 import { Header } from "@/components/Header";
+import { LandingSections } from "@/components/LandingSections";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export default function HomeClient({ emailEnabled = false }: { emailEnabled?: boolean }) {
   const { state, setParsing, setConfirming, setError, setIdle } = useAppStore();
@@ -113,65 +115,80 @@ export default function HomeClient({ emailEnabled = false }: { emailEnabled?: bo
     setConfirming(parsed.event, preview);
   }
 
+  const isIdle = state.status === "idle";
+
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: "var(--bg)" }}>
+    <div className="min-h-dvh flex flex-col">
       <Header userEmail={userEmail} />
 
-      <main className="flex-1 flex flex-col items-center px-4 py-10">
-        <div className="w-full max-w-lg flex flex-col gap-4">
-
-          {state.status === "idle" && (
-            <>
-              {/* Hero text */}
-              <div className="text-center mb-2">
-                <h1 className="text-3xl font-bold tracking-tight leading-tight">
-                  Screenshot → Calendar
+      <main className="flex-1 flex flex-col items-center">
+        {/* Hero / capture */}
+        <section className="w-full flex flex-col items-center px-4 pt-10 md:pt-16 pb-6 md:pb-10">
+          <div className="w-full max-w-xl flex flex-col gap-5">
+            {isIdle && (
+              <div className="text-center flex flex-col items-center gap-4 fade-up">
+                <span className="chip chip-accent">
+                  <span aria-hidden="true">✨</span> Screenshot → calendar in ~3 seconds
+                </span>
+                <h1 className="hero-title">
+                  Turn any screenshot into a <span className="accent">calendar event</span>.
                 </h1>
-                <p className="mt-2 text-base" style={{ color: "var(--ink-2)" }}>
-                  Paste any event screenshot and we&apos;ll add it to your calendar in seconds.
+                <p className="hero-sub max-w-md">
+                  Paste a chat, a booking email, a Luma page — Snapvite reads it,
+                  pulls out the details, and hands you a calendar invite.
                 </p>
               </div>
+            )}
 
-              <CaptureZone />
+            {isIdle && (
+              <div className="fade-up" style={{ animationDelay: "80ms" }}>
+                <CaptureZone />
+              </div>
+            )}
 
-              {/* Privacy note */}
-              <p className="text-xs text-center" style={{ color: "var(--ink-3)" }}>
-                🔒 Screenshots are never stored — only the parsed event data.
-              </p>
-            </>
-          )}
+            {isIdle && (
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs" style={{ color: "var(--ink-3)" }}>
+                <span>🔒 Screenshots never stored</span>
+                <span aria-hidden="true">·</span>
+                <span>⚡ Parsed in ~3s by Claude</span>
+                <span aria-hidden="true">·</span>
+                <span>🆓 Free to try</span>
+              </div>
+            )}
 
-          {state.status === "parsing" && <ParseLoading preview={state.preview} />}
+            {state.status === "parsing" && <ParseLoading preview={state.preview} />}
 
-          {state.status === "confirming" && (
-            <ConfirmationCard
-              event={state.event}
-              preview={state.preview}
-              heyEmail={heyEmail}
-              emailEnabled={emailEnabled}
-            />
-          )}
+            {state.status === "confirming" && (
+              <ConfirmationCard
+                event={state.event}
+                preview={state.preview}
+                heyEmail={heyEmail}
+                emailEnabled={emailEnabled}
+              />
+            )}
 
-          {state.status === "delivering" && (
-            <div className="card p-8 flex flex-col items-center gap-4">
-              <div className="spinner" style={{ width: "32px", height: "32px", borderWidth: "3px" }} />
-              <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>Delivering…</p>
-            </div>
-          )}
+            {state.status === "delivering" && (
+              <div className="card p-8 flex flex-col items-center gap-4">
+                <div className="spinner" style={{ width: "32px", height: "32px", borderWidth: "3px" }} />
+                <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>Delivering…</p>
+              </div>
+            )}
 
-          {state.status === "done" && (
-            <SuccessScreen mode={state.mode} eventTitle={state.event.title} />
-          )}
+            {state.status === "done" && (
+              <SuccessScreen mode={state.mode} eventTitle={state.event.title} />
+            )}
 
-          {state.status === "error" && (
-            <ErrorCard message={state.message} preview={state.preview} />
-          )}
-        </div>
+            {state.status === "error" && (
+              <ErrorCard message={state.message} preview={state.preview} />
+            )}
+          </div>
+        </section>
+
+        {/* Landing marketing — only on idle so it doesn't clutter the flow */}
+        {isIdle && <LandingSections />}
       </main>
 
-      <footer className="text-center text-xs py-5 px-4" style={{ color: "var(--ink-3)", borderTop: "1px solid var(--border)" }}>
-        Built for HEY Calendar users · Screenshots never stored
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

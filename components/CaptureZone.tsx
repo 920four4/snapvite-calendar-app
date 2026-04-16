@@ -105,7 +105,7 @@ export function CaptureZone() {
 
   return (
     <div
-      className={`drop-zone flex flex-col items-center justify-center gap-5 p-10 min-h-[260px] cursor-pointer select-none ${dragOver ? "drag-over" : ""}`}
+      className={`drop-zone flex flex-col items-center justify-center gap-5 p-8 sm:p-10 min-h-[280px] cursor-pointer select-none ${dragOver ? "drag-over" : ""}`}
       onPaste={onPaste}
       onDrop={onDrop}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -126,28 +126,30 @@ export function CaptureZone() {
       />
 
       <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
-        style={{ background: "rgba(255,94,91,0.08)" }}
+        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,94,91,0.14), rgba(255,138,92,0.10))",
+          boxShadow: "inset 0 0 0 1px rgba(255,94,91,0.15)",
+        }}
       >
         📸
       </div>
 
-      <div className="text-center">
-        <p className="text-lg font-semibold" style={{ color: "var(--ink)" }}>
+      <div className="text-center flex flex-col gap-1">
+        <p className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
           Drop a screenshot here
         </p>
-        <p className="text-sm mt-1" style={{ color: "var(--ink-2)" }}>
-          or paste with ⌘V · works with iMessage, Telegram, Luma, and more
+        <p className="text-sm" style={{ color: "var(--ink-2)" }}>
+          iMessage, Telegram, Luma, booking emails — anything with a date on it.
         </p>
       </div>
 
-      <button
-        className="btn btn-surface text-sm"
-        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-        type="button"
-      >
-        Browse file
-      </button>
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <span className="chip"><kbd>⌘</kbd><kbd>V</kbd> paste</span>
+        <span className="chip">or drop</span>
+        <span className="chip">or click to browse</span>
+      </div>
     </div>
   );
 }
